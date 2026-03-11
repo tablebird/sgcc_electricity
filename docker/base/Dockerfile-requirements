@@ -14,11 +14,3 @@ RUN cd /tmp \
     && pip cache purge \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/log/*
-
-COPY scripts/* /app/
-WORKDIR /app
-
-ARG VERSION
-ENV VERSION=${VERSION}
-
-CMD ["python3","main.py"]

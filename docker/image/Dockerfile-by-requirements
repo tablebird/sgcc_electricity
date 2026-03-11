@@ -1,0 +1,9 @@
+FROM tablebird/sgcc_electricity_base:latest-requirements
+
+COPY scripts/* /app/
+WORKDIR /app
+
+ARG VERSION
+ENV VERSION=${VERSION}
+
+CMD ["python3","main.py"]
