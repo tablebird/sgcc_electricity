@@ -322,7 +322,7 @@ class DataFetcher:
                 else:
                     return True
             logging.error(f"Login failed, maybe caused by Sliding CAPTCHA recognition failed")
-        return self._fallback_login(driver)
+        return self._fallback_login(driver, error)
 
     def _get_error_message(self, driver, path) -> Optional[str]:
         """获取错误信息，如果不存在则返回 None"""
@@ -336,14 +336,14 @@ class DataFetcher:
         finally:
             driver.implicitly_wait(self.DRIVER_IMPLICITY_WAIT_TIME)  # 恢复隐式等待
 
-    def _fallback_login(self, driver) -> bool:
+    def _fallback_login(self, driver, reason: str) -> bool:
         """使用 fallback 登录"""
         fallback = os.getenv("LOGIN_FALLBACK")
         if fallback == 'qrcode':
-            return self._qr_login(driver)
+            return self._qr_login(driver, reason)
         return False
 
-    def _qr_login(self, driver) -> bool:
+    def _qr_login(self, driver, reason: str = '') -> bool:
         logging.info("qrcode login start")
         # 切换验证码
         element = WebDriverWait(driver, self.DRIVER_IMPLICITY_WAIT_TIME).until(
@@ -372,7 +372,7 @@ class DataFetcher:
 
         from notify import UrlLoginQrCodeNotify
         notifyFunc = UrlLoginQrCodeNotify()
-        notifyFunc(img_screenshot)
+        notifyFunc(img_screenshot, reason)
         for i in range(1, self.QR_CODE_LOGIN_WAIT_COUNT + 1):
             logging.info(f'qrcode check login wait[{self.QR_CODE_LOGIN_WAIT_TIME_INTERVAL_UNIT}] count[{i}]')
             time.sleep(self.QR_CODE_LOGIN_WAIT_TIME_INTERVAL_UNIT)
@@ -380,9 +380,9 @@ class DataFetcher:
                 logging.info("qrcode Login success")
                 return True
             else:
-                error = self._get_error_message(driver, "//div[@class='sweepCodePic']//div[@class='erwBg']//p")
-                if error is not None:
-                    logging.error(f'qrcode login error[{error}]')
+                qr_error = self._get_error_message(driver, "//div[@class='sweepCodePic']//div[@class='erwBg']//p")
+                if qr_error is not None:
+                    logging.error(f'qrcode login error[{qr_error}]')
                     return False
 
         logging.warning("qrcode Login timeout")
