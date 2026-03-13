@@ -132,7 +132,7 @@ class DataFetcher:
                 return False
         return True
 
-    def _sliding_track(self, driver, distance):
+    def _sliding_track(self, driver, distance, retry_times):
         """Human-like sliding: accelerate → cruise → decelerate → micro-rebound."""
         slider = driver.find_element(By.CLASS_NAME, "slide-verify-slider-mask-item")
         ActionChains(driver).click_and_hold(slider).perform()
@@ -163,7 +163,21 @@ class DataFetcher:
         rebound = random.randint(1, 3)
         ActionChains(driver).move_by_offset(xoffset=-rebound, yoffset=0).perform()
         time.sleep(random.uniform(0.05, 0.15))
+
+        ## 松开前保存图片便于定位是不是滑块和图片的识别问题
+        self.save_slide_captcha(driver, retry_times)
+
         ActionChains(driver).release().perform()
+        
+    def save_slide_captcha(self, driver, retry_times):
+        ## 保存图像验证码
+        try:
+            slide = driver.find_element(By.XPATH, '//*[@id="slideVerify"]')
+            path = f"/data/captcha-{retry_times}.png"
+            slide.screenshot(path)
+            logging.info(f"save slide captcha to {path}")
+        except Exception as e:
+            logging.info(f"save slide captcha to {path} failed, reason is [{e}]")
 
     def insert_expand_data(self, data:dict):
         self.db.insert_expand_data(data)
@@ -288,7 +302,7 @@ class DataFetcher:
                 scaled_distance = round(img_distance * sliding_scale) # 滑块需要滑动的实际距离
                 logging.info(f"CAPTCHA distance={distance}, img_distance={img_distance:.3f}, canvas_width={canvas_width}, scale={scale:.3f}, sliding_scale={sliding_scale:.3f}, scaled={scaled_distance}\r")
 
-                self._sliding_track(driver, scaled_distance)
+                self._sliding_track(driver, scaled_distance, retry_times)
                 time.sleep(self.RETRY_WAIT_TIME_OFFSET_UNIT)
                 if (driver.current_url == LOGIN_URL): # if login not success
                     try:
